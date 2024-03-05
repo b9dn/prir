@@ -13,17 +13,17 @@ void child_on_usr1(int signal) {
     printf("Child otrzymal USR1\n");
 }
 
-void init_range_array(int* arr, int n, int z) {
+void init_range_array(int* range, int n, int z) {
     if(z < n) {
         for(int i = 0; i < z; i++) {
-            arr[i*2] = i;
-            arr[i*2+1] = i;
-            printf("Range segment %d: %d - %d\n", i, arr[i*2], arr[i*2+1]);
+            range[i*2] = i;
+            range[i*2+1] = i;
+            printf("Range segment %d: %d - %d\n", i, range[i*2], range[i*2+1]);
         }
         for(int i = z; i < n; i++) {
-            arr[i*2] = 0;
-            arr[i*2+1] = 0;
-            printf("Range segment %d: %d - %d\n", i, arr[i*2], arr[i*2+1]);
+            range[i*2] = 0;
+            range[i*2+1] = 0;
+            printf("Range segment %d: %d - %d\n", i, range[i*2], range[i*2+1]);
         }
         return;
     }
@@ -33,10 +33,10 @@ void init_range_array(int* arr, int n, int z) {
     int ptr = 0;
     for(int i = 0; i < n; i++) {
         int chunk_size = reminder-- > 0 ? default_chunk_size + 1 : default_chunk_size;
-        arr[i*2] = ptr;
-        arr[i*2+1] = ptr + chunk_size - 1;
+        range[i*2] = ptr;
+        range[i*2+1] = ptr + chunk_size - 1;
         ptr += chunk_size;
-        printf("Range segment %d: %d - %d\n", i, arr[i*2], arr[i*2+1]);
+        printf("Range segment %d: %d - %d\n", i, range[i*2], range[i*2+1]);
     }
 }
 
@@ -140,18 +140,16 @@ int main (int argc, char** argv) {
                 return EXIT_FAILURE;
             case 0:
                 sigsuspend(&mask);
-                int sum = range[i*2+1] ? calc_sum_in_range(primes, range[i*2], range[i*2+1]) : 0;
-                result[i] = sum;
+                result[i] = range[i*2+1] ? calc_sum_in_range(primes, range[i*2], range[i*2+1]) : 0;
                 printf("Zakonczono %d\n", getpid());
                 return EXIT_SUCCESS;
             default:
+                printf("Child %d pid: %d\n", i, child_pids[i]);
                 continue;
         }
     }
 
-    for (int i = 0; i < n; i++)
-        printf("Child %d pid: %d\n", i, child_pids[i]);
-
+    printf("\nWszystko gotowe, za 1s zostanie wyslany SIGUSR1 do wszystkich dzieci\n\n");
     sleep(1);
     for(int i = 0; i < n; i++)
         kill(child_pids[i], SIGUSR1);
@@ -168,5 +166,6 @@ int main (int argc, char** argv) {
     free(primes);
     free_shared_memory(range, 2 * n * sizeof(int));
     free_shared_memory(result, n * sizeof(int));
+
     return 0;
 }
