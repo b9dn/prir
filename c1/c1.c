@@ -14,6 +14,20 @@ void child_on_usr1(int signal) {
 }
 
 void init_range_array(int* arr, int n, int z) {
+    if(z < n) {
+        for(int i = 0; i < z; i++) {
+            arr[i*2] = i;
+            arr[i*2+1] = i;
+            printf("Range segment %d: %d - %d\n", i, arr[i*2], arr[i*2+1]);
+        }
+        for(int i = z; i < n; i++) {
+            arr[i*2] = 0;
+            arr[i*2+1] = 0;
+            printf("Range segment %d: %d - %d\n", i, arr[i*2], arr[i*2+1]);
+        }
+        return;
+    }
+
     int default_chunk_size = z / n;
     int reminder = z % n;
     int ptr = 0;
@@ -95,7 +109,15 @@ int main (int argc, char** argv) {
     printf("Moj PID - %d\n", getpid());
 
     int n = argc < 2 ? 5 : atoi(argv[1]);
+    if (n < 1) {
+        fprintf(stderr, "Bledna liczba n 0\n");
+        return EXIT_FAILURE;
+    }
     int z = argc < 3 ? 20 : atoi(argv[2]);
+    if (z < 1) {
+        fprintf(stderr, "Bledna liczba z 0\n");
+        return EXIT_FAILURE;
+    }
     char* data_filename = "liczby.out";
     char* result_filename = "wynik.out";
     int* primes = generate_primes_list(z);
@@ -118,7 +140,8 @@ int main (int argc, char** argv) {
                 return EXIT_FAILURE;
             case 0:
                 sigsuspend(&mask);
-                result[i] = calc_sum_in_range(primes, range[i*2], range[i*2+1]);
+                int sum = range[i*2+1] ? calc_sum_in_range(primes, range[i*2], range[i*2+1]) : 0;
+                result[i] = sum;
                 printf("Zakonczono %d\n", getpid());
                 return EXIT_SUCCESS;
             default:
