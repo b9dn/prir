@@ -110,12 +110,12 @@ int main (int argc, char** argv) {
 
     int n = argc < 2 ? 5 : atoi(argv[1]);
     if (n < 1) {
-        fprintf(stderr, "Bledna liczba n 0\n");
+        fprintf(stderr, "Bledna liczba n\n");
         return EXIT_FAILURE;
     }
     int z = argc < 3 ? 20 : atoi(argv[2]);
     if (z < 1) {
-        fprintf(stderr, "Bledna liczba z 0\n");
+        fprintf(stderr, "Bledna liczba z\n");
         return EXIT_FAILURE;
     }
     char* data_filename = "liczby.out";
