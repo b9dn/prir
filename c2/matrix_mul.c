@@ -2,30 +2,33 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <unistd.h>
+#include <math.h>
 
-double** A_shared;
-double** B_shared;
-double** C_shared;
-int mc, nc, mid;
+typedef struct {
+    double** data;
+    int rows;
+    int cols;
+} matrix_t;
 
-void mnoz(double**A, int a, int b, double**B, int c, int d, double**C) {
-    int i, j, k;
-    double s;
-    for(i=0; i<a; i++) {
-        for(j=0; j<d; j++) {
-            s = 0;
-            for(k=0; k<b; k++) {
-                s+=A[i][k]*B[k][j];
-            }
-            C[i][j] = s;
-        }
+typedef struct {
+    matrix_t matrix_A;
+    matrix_t matrix_B;
+    matrix_t* matrix_C;
+    int start_field;
+    int fields_num;
+    int thread_id;
+} mlt_thread_args_t;
 
-    }
-}
+typedef struct {
+    matrix_t matrix;
+    int start_field;
+    int fields_num;   
+    double* result; 
+} frbns_thread_args_t;
 
 void print_matrix(double**A, int m, int n) {
     int i, j;
-    printf("[");
+    printf("[\n");
     for(i =0; i< m; i++)
     {
         for(j=0; j<n; j++)
@@ -34,179 +37,186 @@ void print_matrix(double**A, int m, int n) {
         }
         printf("\n");
     }
-    printf("]\n");
+    printf("]\n\n");
 }
 
-void init_matrix(double*** matrix_A, int* ma, int* na, double*** matrix_B, int* mb, int* nb, double*** matrix_C) {
-    double **A;
-    double **B;
-    double **C;
+void read_matrix(char* file_name, matrix_t* matrix) {
+    FILE *fp;
+    double num;
 
-    FILE *fpa;
-    FILE *fpb;
-    int i, j;
-    double x;
-
-    fpa = fopen("A.txt", "r");
-    fpb = fopen("B.txt", "r");
-    if( fpa == NULL || fpb == NULL ) {
-        perror("błąd otwarcia pliku");
+    fp = fopen(file_name, "r");
+    if( fp == NULL ) {
+        perror("Blad otwarcia pliku");
         exit(-10);
     }
 
-    fscanf (fpa, "%d", ma);
-    fscanf (fpa, "%d", na);
+    fscanf (fp, "%d", &matrix->rows);
+    fscanf (fp, "%d", &matrix->cols);
+
+    double **A = malloc(matrix->rows * sizeof(double));
+    for(int i=0; i< matrix->rows; i++) {
+        A[i] = malloc(matrix->cols * sizeof(double));
+    }
+
+    for(int row_ptr = 0; row_ptr < matrix->rows; row_ptr++) {
+        for(int col_ptr = 0; col_ptr < matrix->cols; col_ptr++) {
+            fscanf( fp, "%lf", &num );
+            A[row_ptr][col_ptr] = num;
+        }
+    }
+
+    matrix->data = A;
+    fclose(fp);
+}
 
 
-    fscanf (fpb, "%d", mb);
-    fscanf (fpb, "%d", nb);
+void init_matrixes(matrix_t* matrix_A, matrix_t* matrix_B, matrix_t* matrix_C) {
+    read_matrix("A.txt", matrix_A);
+    read_matrix("B.txt", matrix_B);
 
-    printf("pierwsza macierz ma wymiar %d x %d, a druga %d x %d\n", *ma, *na, *mb, *nb);
-
-    if(*na != *mb) {
+    if(matrix_A->cols != matrix_B->rows) {
         printf("Złe wymiary macierzy!\n");
         exit(-1);
     }
-    
-    /*Alokacja pamięci*/
-    A = malloc(*ma*sizeof(double));
-    for(i=0; i< *ma; i++) {
-        A[i] = malloc(*na*sizeof(double));
+
+    printf("Wczytana macierz A:\n");
+    print_matrix(matrix_A->data, matrix_A->rows, matrix_A->cols);
+
+    printf("Wczytana macierz B:\n");
+    print_matrix(matrix_B->data, matrix_B->rows, matrix_B->cols);
+
+    matrix_C->rows = matrix_A->rows;
+    matrix_C->cols = matrix_B->cols;
+    matrix_C->data = malloc(matrix_A->rows * sizeof(double));
+    for(int i = 0; i < matrix_A->rows; i++) {
+        matrix_C->data[i] = malloc(matrix_B->cols * sizeof(double));
     }
+}
 
-    B = malloc(*mb*sizeof(double));
-    for(i=0; i< *mb; i++) {
-        B[i] = malloc(*nb*sizeof(double));
+void free_matrix(matrix_t* matrix) {
+    for(int i=0; i<matrix->rows; i++) {
+        free(matrix->data[i]);
     }
-
-    /*Macierz na wynik*/
-    C = malloc(*ma*sizeof(double));
-    for(i=0; i< *ma; i++) {
-        C[i] = malloc(*nb*sizeof(double));
-    }
-    printf("Rozmiar C: %dx%d\n", *ma, *nb);
-
-    for(i =0; i< *ma; i++) {
-        for(j = 0; j<*na; j++) {
-            fscanf( fpa, "%lf", &x );
-            A[i][j] = x;
-        }
-    }
-
-    printf("A:\n");
-    print_matrix(A, *ma, *mb);
-
-    for(i =0; i< *mb; i++) {
-        for(j = 0; j<*nb; j++) {
-            fscanf( fpb, "%lf", &x );
-            B[i][j] = x;
-        }
-    }
-    printf("B:\n");
-    print_matrix(B, *mb, *nb);
-
-    mnoz(A, *ma, *na, B, *mb, *nb, C);
-
-    printf("C:\n");
-    print_matrix(C, *ma, *nb);
-
-    fclose(fpa);
-    fclose(fpb);
-
-
-    *matrix_A = A;
-    *matrix_B = B;
-    *matrix_C = C;
+    free(matrix->data);
 }
 
 void* calc_matrix_chunk(void* args) {
-    int chunk_size = *(int*)args;
-    int offset = ((int*)args)[1];
-    int col = offset % nc;
-    int row = offset / nc;
-    /* printf("Thread cs %d  off %d - col  %d x row %d\n", chunk_size, offset, start_col, start_row); */
-    for(int i = 0; i < chunk_size; i++) {
+    mlt_thread_args_t* targs = (mlt_thread_args_t*)args;
+    int start_field = targs->start_field;
+    int fields_num = targs->fields_num;
+    double** A = targs->matrix_A.data;
+    double** B = targs->matrix_B.data;
+    double** C = targs->matrix_C->data;
+
+    for(int i = start_field; i < start_field + fields_num; i++) {
+        int row = i / targs->matrix_B.cols;
+        int col = i % targs->matrix_B.cols;
         double sum = 0;
-        for(int j = 0; j < mid; j++)
-            sum += A_shared[row][j] * B_shared[j][col];
-
-        C_shared[row][col] = sum;
-
-        col++;
-        if(col == nc) {
-            col = 0;
-            row++;
+        for(int j = 0; j < targs->matrix_A.cols; j++) {
+            sum += A[row][j] * B[j][col];
         }
+        C[row][col] = sum;
     }
 
     return NULL;
 }
 
-pthread_t* create_n_threads(int n) {
-    int fields = mc * nc;
-    int default_chunk_size = fields / n;
+pthread_t* calc_mlt_matrix(int threads_num, matrix_t matrix_A, matrix_t matrix_B, matrix_t* matrix_C) {
+    int fields = matrix_C->rows * matrix_C->cols;
+    int default_chunk_size = fields / threads_num;
+    int remainder = fields % threads_num;
+    int ptr = 0;
+    pthread_t* threads = malloc(threads_num * sizeof(pthread_t));
+    for(int i = 0; i < threads_num; i++) {
+        int chunk_size = remainder-- > 0 ? default_chunk_size + 1 : default_chunk_size;
+        
+        mlt_thread_args_t* args = malloc(sizeof(mlt_thread_args_t));
+        args->matrix_A = matrix_A;
+        args->matrix_B = matrix_B;
+        args->matrix_C = matrix_C;
+        args->start_field = ptr;
+        args->fields_num = chunk_size;
+        args->thread_id = i;
 
-    pthread_t* threads = malloc(n * sizeof(pthread_t));
-    for(int i = 0; i < n; i++) {
-        int chunk_size = i == n - 1 ? fields - (n-1) * default_chunk_size : default_chunk_size;
-        int* args = malloc(3 * sizeof(int));
-        args[0] = chunk_size;
-        args[1] = i * default_chunk_size;
-        args[2] = mid;
         pthread_create(&threads[i], NULL, calc_matrix_chunk, (void*)args);
+        ptr += chunk_size;
+    }
+    
+    return threads;
+}
+
+void* calc_frbns_norm_chunk(void* args) {
+    frbns_thread_args_t* targs = (frbns_thread_args_t*)args;
+    int start_field = targs->start_field;
+    int fields_num = targs->fields_num;
+    int cols = targs->matrix.cols;
+    double** matrix = targs->matrix.data;
+    double* result = targs->result;
+
+    double sum = 0;
+    for(int i = start_field; i < start_field + fields_num; i++) {
+        int row = i / cols;
+        int col = i % cols;
+        sum += pow(matrix[row][col], 2);
+    }
+
+    *result = sum;
+    return NULL;
+}
+
+pthread_t* calc_frbns_norm(int threads_num, double* partial_square_sums, matrix_t matrix) {
+    int matrix_size = matrix.rows * matrix.cols;
+    int default_chunk_size = matrix_size / threads_num;
+    int remainder = matrix_size % threads_num;
+    int ptr = 0;
+    pthread_t* threads = malloc(threads_num * sizeof(pthread_t));
+    for(int i = 0; i < threads_num; i++) {
+        int chunk_size = remainder-- > 0 ? default_chunk_size + 1 : default_chunk_size;
+        
+        frbns_thread_args_t* args = malloc(sizeof(frbns_thread_args_t));
+        args->matrix = matrix;
+        args->start_field = ptr;
+        args->fields_num = chunk_size;
+        args->result = &partial_square_sums[i];
+        
+        pthread_create(&threads[i], NULL, calc_frbns_norm_chunk, (void*)args);
+        ptr += chunk_size;
     }
     
     return threads;
 }
 
 int main(int argc, char** argv) {
-
     int N = argc > 1 ? atoi(argv[1]) : 5;
-    
-    double **A;
-    double **B;
-    double **C;
 
-    int ma, mb, na, nb;
+    matrix_t matrix_A;
+    matrix_t matrix_B;
+    matrix_t matrix_C;
 
-    init_matrix(&A, &ma, &na, &B, &mb, &nb, &C);
+    init_matrixes(&matrix_A, &matrix_B, &matrix_C);
 
-    C_shared = malloc(ma*sizeof(double));
-    for(int i = 0; i < ma; i++) {
-        C_shared[i] = malloc(nb*sizeof(double));
-    }
-    mc = ma;
-    nc = nb;
-    mid = mb;
-    printf("ncmcm sadkfj asf  mc %d  nc %d\n", mc, nc);
-
-    A_shared = A; // do poprawy
-    B_shared = B; // do poprawy
-
-    pthread_t* threads = create_n_threads(N);
-
+    pthread_t* mlt_threads = calc_mlt_matrix(N, matrix_A, matrix_B, &matrix_C);
     for(int i = 0; i < N; i++) {
-        pthread_join(threads[i], NULL);
+        pthread_join(mlt_threads[i], NULL);
     }
+    printf("Obliczona macierz C:\n");
+    print_matrix(matrix_C.data, matrix_C.rows, matrix_C.cols);
 
-    sleep(1);
-    print_matrix(C_shared, mc, nc);
-
-    // zwalnianie
-    for(int i=0; i<na; i++) {
-        free(A[i]);
+    double* partial_square_sums = malloc(N * sizeof(double));
+    pthread_t* frbns_threads = calc_frbns_norm(N, partial_square_sums, matrix_C);
+    for(int i = 0; i < N; i++) {
+        pthread_join(frbns_threads[i], NULL);
     }
-    free(A);
-
-    for(int i=0; i<nb; i++) {
-        free(B[i]);
+    double total_sum = 0;
+    printf("Czesciowe sumy kwadratow:\n[ ");
+    for(int i = 0; i < N; i++) {
+        total_sum += partial_square_sums[i];
+        printf("%f ", partial_square_sums[i]);
     }
-    free(B);
+    printf("]\nSuma kwadratow: %f\n", total_sum);
+    printf("Norm: %f\n", sqrt(total_sum));
 
-    for(int i=0; i<nb; i++) {
-        free(C[i]);
-    }
-    free(C);
-
-    return 0;
+    free_matrix(&matrix_A);
+    free_matrix(&matrix_B);
+    free_matrix(&matrix_C);
 }
