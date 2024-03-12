@@ -213,7 +213,7 @@ int main(int argc, char** argv) {
         printf("%f ", partial_square_sums[i]);
     }
     printf("]\nSuma kwadratow: %f\n", total_sum);
-    printf("Norm: %f\n", sqrt(total_sum));
+    printf("Norma Frobeniusa: %f\n", sqrt(total_sum));
 
     free_matrix(&matrix_A);
     free_matrix(&matrix_B);
