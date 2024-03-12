@@ -27,11 +27,10 @@ typedef struct {
 } frbns_thread_args_t;
 
 void print_matrix(double**A, int m, int n) {
-    int i, j;
     printf("[\n");
-    for(i =0; i< m; i++)
+    for(int i =0; i< m; i++)
     {
-        for(j=0; j<n; j++)
+        for(int j=0; j<n; j++)
         {
             printf("%f ", A[i][j]);
         }
@@ -54,7 +53,7 @@ void read_matrix(char* file_name, matrix_t* matrix) {
     fscanf (fp, "%d", &matrix->cols);
 
     double **A = malloc(matrix->rows * sizeof(double));
-    for(int i=0; i< matrix->rows; i++) {
+    for(int i = 0; i < matrix->rows; i++) {
         A[i] = malloc(matrix->cols * sizeof(double));
     }
 
@@ -94,7 +93,7 @@ void init_matrixes(matrix_t* matrix_A, matrix_t* matrix_B, matrix_t* matrix_C) {
 }
 
 void free_matrix(matrix_t* matrix) {
-    for(int i=0; i<matrix->rows; i++) {
+    for(int i = 0; i < matrix->rows; i++) {
         free(matrix->data[i]);
     }
     free(matrix->data);
