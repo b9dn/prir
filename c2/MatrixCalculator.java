@@ -2,8 +2,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Locale;
 import java.util.Scanner;
+import static java.lang.Math.sqrt;
 
-public class MatrixFrobeniusNormCalculator {
+public class MatrixCalculator {
     public class Matrix {
         private int ncols;
         private int nrows;
@@ -30,6 +31,20 @@ public class MatrixFrobeniusNormCalculator {
         public int cols() {
             return ncols;
         }
+
+        public void print() {
+            System.out.println("[");
+            for (int r = 0; r < nrows; r++) {
+
+                for (int c = 0; c < ncols; c++) {
+                    System.out.print(get(r, c));
+                    System.out.print(" ");
+                }
+
+                System.out.println("");
+            }
+            System.out.println("]\n");
+        }
     }
 
     protected Matrix read(String fname) throws FileNotFoundException {
@@ -49,26 +64,13 @@ public class MatrixFrobeniusNormCalculator {
         return res;
     }
 
-    protected void print(Matrix m) {
-        System.out.println("[");
-        for (int r = 0; r < m.rows(); r++) {
-
-            for (int c = 0; c < m.cols(); c++) {
-                System.out.print(m.get(r, c));
-                System.out.print(" ");
-            }
-
-            System.out.println("");
-        }
-        System.out.println("]\n");
-    }
-
     protected class MultChunkCalculator extends Thread {
         private Matrix A;
         private Matrix B;
         private Matrix C;
         private int startField;
         private int fieldsNum;
+        private float squaresSum;
 
         public MultChunkCalculator(Matrix A, Matrix B, Matrix C, int startField, int fieldsNum) {
             this.A = A;
@@ -76,6 +78,7 @@ public class MatrixFrobeniusNormCalculator {
             this.C = C;
             this.startField = startField;
             this.fieldsNum = fieldsNum;
+            this.squaresSum = 0;
         }
 
         public void run() {
@@ -87,7 +90,12 @@ public class MatrixFrobeniusNormCalculator {
                     sum += A.get(row, j) * B.get(j, col);
                 }
                 C.set(row, col, sum);
+                squaresSum += sum * sum;
             }
+        }
+
+        public float getSquaresSum() {
+            return squaresSum;
         }
     }
 
@@ -95,6 +103,7 @@ public class MatrixFrobeniusNormCalculator {
         private Matrix A;
         private Matrix B;
         private Matrix C;
+        private float frobeniusNorm;
         private int threadsNum;
 
         public MultCalculator(Matrix A, Matrix B, Matrix C, int threadsNum) {
@@ -102,10 +111,11 @@ public class MatrixFrobeniusNormCalculator {
             this.B = B;
             this.C = C;
             this.threadsNum = threadsNum;
+            this.frobeniusNorm = 0;
         }
 
         public void calculate() throws InterruptedException {
-            Thread[] threads = new Thread[threadsNum];
+            MultChunkCalculator[] threads = new MultChunkCalculator[threadsNum];
             int fieldsNum = C.cols() * C.rows();
             int defaultChunkSize = fieldsNum / threadsNum;
             int remainder = fieldsNum % threadsNum;
@@ -119,25 +129,28 @@ public class MatrixFrobeniusNormCalculator {
             }
             for (int i = 0; i < threadsNum; i++) {
                 threads[i].join();
+                frobeniusNorm += threads[i].getSquaresSum();
             }
+            frobeniusNorm = (float)sqrt(frobeniusNorm);
+        }
+
+        public float getFrobeniusNorm() {
+            return frobeniusNorm;
         }
     }
 
     protected void start(String[] args) throws FileNotFoundException {
-        int threadsNum = 5;
-        if (args.length > 0) {
-            threadsNum = Integer.parseInt(args[0]);
-        }
+        int threadsNum = args.length > 0 ? Integer.parseInt(args[0]) : 5;
 
         Matrix A, B;
         A = read("A.txt");
         B = read("B.txt");
 
         System.out.println("Wczytalem A:");
-        print(A);
+        A.print();
 
         System.out.println("Wczytalem B:");
-        print(B);
+        B.print();
 
         if (A.cols() != B.rows()) {
             System.out.println("Zle wymiary macierzy");
@@ -153,14 +166,13 @@ public class MatrixFrobeniusNormCalculator {
             e.printStackTrace();
         }
         System.out.println("Obliczona macierz C:");
-        print(C);
+        C.print();
 
-        System.out.println("Jak doszedlem tutaj, to pewnie jest ok :-).");
-
+        System.out.println("Norma Frobeniusa: " + mltCalculator.getFrobeniusNorm());
     }
 
     public static void main(String[] args) {
-        MatrixFrobeniusNormCalculator normCalculator = new MatrixFrobeniusNormCalculator();
+        MatrixCalculator normCalculator = new MatrixCalculator();
 
         try {
             normCalculator.start(args);
@@ -169,5 +181,4 @@ public class MatrixFrobeniusNormCalculator {
             e.printStackTrace();
         }
     }
-
 }
