@@ -1,8 +1,9 @@
+import static java.lang.Math.sqrt;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Locale;
 import java.util.Scanner;
-import static java.lang.Math.sqrt;
 
 public class MatrixCalculator {
     public class Matrix {
@@ -131,7 +132,7 @@ public class MatrixCalculator {
                 threads[i].join();
                 frobeniusNorm += threads[i].getSquaresSum();
             }
-            frobeniusNorm = (float)sqrt(frobeniusNorm);
+            frobeniusNorm = (float) sqrt(frobeniusNorm);
         }
 
         public float getFrobeniusNorm() {
