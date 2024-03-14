@@ -2,6 +2,7 @@ import static java.lang.Math.sqrt;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.util.InputMismatchException;
 import java.util.Locale;
 import java.util.Scanner;
 
@@ -51,16 +52,27 @@ public class MatrixCalculator {
     protected Matrix read(String fname) throws FileNotFoundException {
         File f = new File(fname);
         Scanner scanner = new Scanner(f).useLocale(Locale.ENGLISH);
+        Matrix res = null;
 
-        int rows = scanner.nextInt();
-        int cols = scanner.nextInt();
-        Matrix res = new Matrix(rows, cols);
-
-        for (int r = 0; r < res.rows(); r++) {
-            for (int c = 0; c < res.cols(); c++) {
-                res.set(r, c, scanner.nextFloat());
+        try {
+            int rows = scanner.nextInt();
+            int cols = scanner.nextInt();
+            if(rows < 1 || cols < 1) {
+                System.out.println("Bledny format pliku");
+                System.exit(-1);
             }
+            res = new Matrix(rows, cols);
+
+            for (int r = 0; r < res.rows(); r++) {
+                for (int c = 0; c < res.cols(); c++) {
+                    res.set(r, c, scanner.nextFloat());
+                }
+            }
+        } catch(Exception e) {
+            System.out.println("Bledny format pliku");
+            System.exit(-1);
         }
+
         scanner.close();
         return res;
     }
@@ -132,7 +144,7 @@ public class MatrixCalculator {
                 threads[i].join();
                 frobeniusNorm += threads[i].getSquaresSum();
             }
-            frobeniusNorm = (float) sqrt(frobeniusNorm);
+            frobeniusNorm = (float)sqrt(frobeniusNorm);
         }
 
         public float getFrobeniusNorm() {
