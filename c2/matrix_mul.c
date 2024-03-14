@@ -23,7 +23,6 @@ double squares_sum;
 double frobenius_norm;
 pthread_mutex_t lock;
 
-
 void check_malloc(void* ptr) {
     if(ptr == NULL) {
         printf("Blad malloc\n");
@@ -49,13 +48,25 @@ void read_matrix(char* file_name, matrix_t* matrix) {
     double num;
 
     fp = fopen(file_name, "r");
-    if( fp == NULL ) {
+    if(fp == NULL) {
         perror("Blad otwarcia pliku");
         exit(-10);
     }
 
-    fscanf (fp, "%d", &matrix->rows);
-    fscanf (fp, "%d", &matrix->cols);
+    if(fscanf(fp, "%d", &matrix->rows) != 1) {
+        printf("Bledny format pliku\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if(fscanf(fp, "%d", &matrix->cols) != 1) {
+        printf("Bledny format pliku\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if(matrix->cols < 1 || matrix->rows < 1) {
+        printf("Bledny format pliku\n");
+        exit(EXIT_FAILURE);
+    }
 
     matrix->data = malloc(matrix->rows * sizeof(double));
     check_malloc(matrix->data);
@@ -66,7 +77,10 @@ void read_matrix(char* file_name, matrix_t* matrix) {
 
     for(int row_ptr = 0; row_ptr < matrix->rows; row_ptr++) {
         for(int col_ptr = 0; col_ptr < matrix->cols; col_ptr++) {
-            fscanf( fp, "%lf", &num );
+            if(fscanf(fp, "%lf", &num) != 1) {
+                printf("Bledny format pliku\n");
+                exit(EXIT_FAILURE);
+            }
             matrix->data[row_ptr][col_ptr] = num;
         }
     }
@@ -176,6 +190,10 @@ pthread_t* calc_mlt_matrix(int threads_num) {
 
 int main(int argc, char** argv) {
     int N = argc > 1 ? atoi(argv[1]) : 5;
+    if(N < 1) {
+        printf("Niepoprawna liczba watkow\n");
+        return EXIT_FAILURE;
+    }
 
     init(N);
 
