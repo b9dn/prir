@@ -2,7 +2,6 @@ import static java.lang.Math.sqrt;
 
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.util.InputMismatchException;
 import java.util.Locale;
 import java.util.Scanner;
 
@@ -57,7 +56,7 @@ public class MatrixCalculator {
         try {
             int rows = scanner.nextInt();
             int cols = scanner.nextInt();
-            if(rows < 1 || cols < 1) {
+            if (rows < 1 || cols < 1) {
                 System.out.println("Bledny format pliku");
                 System.exit(-1);
             }
@@ -68,7 +67,7 @@ public class MatrixCalculator {
                     res.set(r, c, scanner.nextFloat());
                 }
             }
-        } catch(Exception e) {
+        } catch (Exception e) {
             System.out.println("Bledny format pliku");
             System.exit(-1);
         }
@@ -84,6 +83,7 @@ public class MatrixCalculator {
         private int startField;
         private int fieldsNum;
         private float squaresSum;
+        private float partialSum;
 
         public MultChunkCalculator(Matrix A, Matrix B, Matrix C, int startField, int fieldsNum) {
             this.A = A;
@@ -92,6 +92,7 @@ public class MatrixCalculator {
             this.startField = startField;
             this.fieldsNum = fieldsNum;
             this.squaresSum = 0;
+            this.partialSum = 0;
         }
 
         public void run() {
@@ -104,11 +105,16 @@ public class MatrixCalculator {
                 }
                 C.set(row, col, sum);
                 squaresSum += sum * sum;
+                partialSum += sum;
             }
         }
 
         public float getSquaresSum() {
             return squaresSum;
+        }
+
+        public float getPartialSum() {
+            return partialSum;
         }
     }
 
@@ -118,6 +124,7 @@ public class MatrixCalculator {
         private Matrix C;
         private float frobeniusNorm;
         private int threadsNum;
+        private float partialSums[];
 
         public MultCalculator(Matrix A, Matrix B, Matrix C, int threadsNum) {
             this.A = A;
@@ -125,6 +132,7 @@ public class MatrixCalculator {
             this.C = C;
             this.threadsNum = threadsNum;
             this.frobeniusNorm = 0;
+            this.partialSums = new float[threadsNum];
         }
 
         public void calculate() throws InterruptedException {
@@ -143,12 +151,17 @@ public class MatrixCalculator {
             for (int i = 0; i < threadsNum; i++) {
                 threads[i].join();
                 frobeniusNorm += threads[i].getSquaresSum();
+                partialSums[i] = threads[i].getPartialSum();
             }
-            frobeniusNorm = (float)sqrt(frobeniusNorm);
+            frobeniusNorm = (float) sqrt(frobeniusNorm);
         }
 
         public float getFrobeniusNorm() {
             return frobeniusNorm;
+        }
+
+        public float[] getPartialSums() {
+            return partialSums;
         }
     }
 
@@ -180,6 +193,15 @@ public class MatrixCalculator {
         }
         System.out.println("Obliczona macierz C:");
         C.print();
+
+        System.out.println("Sumy czesciowe: ");
+        float partialSums[] = mltCalculator.getPartialSums();
+        float sum = 0;
+        for (int i = 0; i < threadsNum; i++) {
+            sum += partialSums[i];
+            System.out.println(i + ": " + partialSums[i]);
+        }
+        System.out.println("Suma calkowita: " + sum);
 
         System.out.println("Norma Frobeniusa: " + mltCalculator.getFrobeniusNorm());
     }
