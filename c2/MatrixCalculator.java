@@ -124,7 +124,7 @@ public class MatrixCalculator {
         private Matrix C;
         private float frobeniusNorm;
         private int threadsNum;
-        private float partialSums[];
+        private float sum;
 
         public MultCalculator(Matrix A, Matrix B, Matrix C, int threadsNum) {
             this.A = A;
@@ -132,7 +132,7 @@ public class MatrixCalculator {
             this.C = C;
             this.threadsNum = threadsNum;
             this.frobeniusNorm = 0;
-            this.partialSums = new float[threadsNum];
+            this.sum = 0;
         }
 
         public void calculate() throws InterruptedException {
@@ -151,7 +151,7 @@ public class MatrixCalculator {
             for (int i = 0; i < threadsNum; i++) {
                 threads[i].join();
                 frobeniusNorm += threads[i].getSquaresSum();
-                partialSums[i] = threads[i].getPartialSum();
+                sum += threads[i].getPartialSum();
             }
             frobeniusNorm = (float) sqrt(frobeniusNorm);
         }
@@ -160,8 +160,8 @@ public class MatrixCalculator {
             return frobeniusNorm;
         }
 
-        public float[] getPartialSums() {
-            return partialSums;
+        public float getSum() {
+            return sum;
         }
     }
 
@@ -194,14 +194,7 @@ public class MatrixCalculator {
         System.out.println("Obliczona macierz C:");
         C.print();
 
-        System.out.println("Sumy czesciowe: ");
-        float partialSums[] = mltCalculator.getPartialSums();
-        float sum = 0;
-        for (int i = 0; i < threadsNum; i++) {
-            sum += partialSums[i];
-            System.out.println(i + ": " + partialSums[i]);
-        }
-        System.out.println("Suma calkowita: " + sum);
+        System.out.println("Suma: " + mltCalculator.getSum());
 
         System.out.println("Norma Frobeniusa: " + mltCalculator.getFrobeniusNorm());
     }
