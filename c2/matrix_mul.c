@@ -21,6 +21,7 @@ matrix_t matrix_B;
 matrix_t matrix_C;
 double squares_sum;
 double frobenius_norm;
+double elements_sum;
 pthread_mutex_t lock;
 
 void check_malloc(void* ptr) {
@@ -119,6 +120,7 @@ void init(int threads_num) {
 
     squares_sum = 0;
     frobenius_norm = 0;
+    elements_sum = 0;
 }
 
 void free_data() {
@@ -146,6 +148,7 @@ void* calc_matrix_chunk(void* args) {
     int fields_num = targs->fields_num;
 
     double sqres_sum = 0;
+    double all_calculated_elems_sum = 0;
     for(int i = start_field; i < start_field + fields_num; i++) {
         int row = i / matrix_B.cols;
         int col = i % matrix_B.cols;
@@ -155,10 +158,12 @@ void* calc_matrix_chunk(void* args) {
         }
         matrix_C.data[row][col] = sum;
         sqres_sum += sum * sum;
+        all_calculated_elems_sum += sum;
     }
 
     pthread_mutex_lock(&lock);
     squares_sum += sqres_sum;
+    elements_sum += all_calculated_elems_sum;
     pthread_mutex_unlock(&lock);
 
     free(targs);
@@ -207,6 +212,7 @@ int main(int argc, char** argv) {
     printf("Obliczona macierz C:\n");
     print_matrix(matrix_C);
 
+    printf("Suma wszystkich elementow: %lf\n", elements_sum);
     printf("Norma frobeniusa: %lf\n", frobenius_norm);
 
     free(mlt_threads);
