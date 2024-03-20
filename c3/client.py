@@ -1,24 +1,39 @@
+import ipaddress
 import math, sys, time
 from multiprocessing.managers import BaseManager
 
+AUTHKEY = b'blah'
 
-def mnoz(dane):
-    A = dane[0]
-    X = dane[1]
+def validate_server(args):
+    ip = '127.0.0.1'
+    port = 8888
 
-    nrows = len(A)
-    ncols = len(A[0])
-    y = []
-    for i in range(nrows):
-        s = 0
-        for c in range(0, ncols):
-            s += A[i][c] * X[c][0]
-        # time.sleep(0.1)
+    if len(args) < 3:
+        return ip, port
 
-        y.append(s)
+    if isinstance(args[1], str) and (args[1] == 'localhost' or isinstance(ipaddress.ip_address(args[1]), ipaddress.IPv4Address)):
+        ip = args[1]    
+    if args[2].isnumeric() and int(args[2]) > 0 and int(args[2]) < 65535:
+        port = args[2]
 
-    return y
+    return ip, int(port)
 
+def validate_args(args):
+    ncpus = 5
+    fnameA = "A.dat"
+    fnameX = "X.dat"
+
+    if len(args) < 6:
+        return ncpus, fnameA, fnameX
+    
+    if args[3].isnumeric() and int(args[3]) > 0:
+        ncpus = args[3]
+    if isinstance(args[4], str):
+        fnameA = args[4]
+    if isinstance(args[5], str):
+        fnameX = args[5]
+    
+    return int(ncpus), fnameA, fnameX
 
 def read(fname):
     f = open(fname, "r")
@@ -37,24 +52,19 @@ def read(fname):
 
     return A
 
-
-ncpus = int(sys.argv[1]) if len(sys.argv) > 1 else 2
-fnameA = sys.argv[2] if len(sys.argv) > 2 else "A.dat"
-fnameX = sys.argv[3] if len(sys.argv) > 3 else "X.dat"
+ip, port = validate_server(sys.argv)
+ncpus, fnameA, fnameX = validate_args(sys.argv)
 
 A = read(fnameA)
 X = read(fnameX)
-
 
 class QueueManager(BaseManager):
     pass
 
 
-ip = '127.0.0.1'
-port = 8888
 QueueManager.register('in_queue')
 QueueManager.register('out_queue')
-manager = QueueManager(address=(ip, int(port)), authkey=b'blah')
+manager = QueueManager(address=(ip, port), authkey=AUTHKEY)
 manager.connect()
 queue_in = manager.in_queue()
 queue_out = manager.out_queue()
@@ -80,4 +90,5 @@ results = []
 for i in range(ncpus):
     results.append(queue_out.get())
 
-print(results)
+print("Wynik:")
+print(sorted(results))
