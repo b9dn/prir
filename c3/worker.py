@@ -1,8 +1,7 @@
-from multiprocessing import Pool, Process
+from multiprocessing import Process
 from multiprocessing.managers import BaseManager
 import sys
 import ipaddress
-import time
 
 AUTHKEY = b'blah'
 
@@ -24,7 +23,7 @@ def validate_input(A, X):
     if len(A[0]) != len(X):
         raise ValueError("Bledny format pliku")
 
-def mul_matrix_part(A, X, index_range, indx_of_proc):
+def mul_matrix_part(A, X, index_range, indx_of_proc, queue_out):
     calculated_size = index_range[1] - index_range[0]
     calculated = [0] * calculated_size
     row = index_range[0] // len(X[0])
@@ -36,8 +35,7 @@ def mul_matrix_part(A, X, index_range, indx_of_proc):
         if col >= len(X[0]):
             row += 1
             col = 0
-
-    return (indx_of_proc, calculated)
+    queue_out.put((indx_of_proc, calculated))
 
 class QueueManager(BaseManager):
     pass
@@ -65,12 +63,11 @@ if __name__ == '__main__':
     ranges = queue_in.get()
     procs = []
 
-    start = time.time()
-    pool = Pool(processes=ncpus)
     for i in range(ncpus):
-        p = pool.apply_async(mul_matrix_part, args=(A, X, ranges[i], i), callback=queue_out.put)
+        p = Process(target=mul_matrix_part, args=(A, X, ranges[i], i, queue_out))
+        p.start()
+        procs.append(p)
 
-    pool.close()
-    pool.join()
-    end = time.time()
-    print("Czas: ", end - start)
+    for p in procs:
+        p.join()
+    
