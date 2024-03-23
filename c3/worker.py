@@ -4,20 +4,6 @@ import sys, time
 import ipaddress
 
 AUTHKEY = b'blah'
-
-def validate_server(args):
-    ip = '127.0.0.1'
-    port = 8888
-
-    if len(args) < 3:
-        return ip, port
-
-    if isinstance(args[1], str) and (args[1] == 'localhost' or isinstance(ipaddress.ip_address(args[1]), ipaddress.IPv4Address)):
-        ip = args[1]    
-    if args[2].isnumeric() and int(args[2]) > 0 and int(args[2]) < 65535:
-        port = args[2]
-
-    return ip, int(port)
     
 def validate_input(A, X):
     if len(A[0]) != len(X):
@@ -48,7 +34,9 @@ class QueueManager(BaseManager):
 
 if __name__ == '__main__':
     start = time.time()
-    ip, port = validate_server(sys.argv)
+    ip = sys.argv[1] if len(sys.argv) > 1 and  isinstance(sys.argv[1], str) and (sys.argv[1] == 'localhost' or isinstance(ipaddress.ip_address(sys.argv[1]), ipaddress.IPv4Address)) else '127.0.0.1'
+    port = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isnumeric() and int(sys.argv[2]) > 0 and int(sys.argv[2]) < 65535 else 8888
+  
 
     (queue_in, queue_out) = get_queues(ip, port)
 
