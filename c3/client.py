@@ -23,11 +23,13 @@ def validate_args(args):
     fnameA = "A.dat"
     fnameX = "X.dat"
 
-    if len(args) < 6:
+    if len(args) < 4:
         return ncpus, fnameA, fnameX
-    
     if args[3].isnumeric() and int(args[3]) > 0:
         ncpus = args[3]
+
+    if len(args) < 6:
+        return int(ncpus), fnameA, fnameX
     if isinstance(args[4], str):
         fnameA = args[4]
     if isinstance(args[5], str):
@@ -58,6 +60,10 @@ ncpus, fnameA, fnameX = validate_args(sys.argv)
 A = read(fnameA)
 X = read(fnameX)
 
+if len(A) < ncpus:
+    print("Za duzo procesow")
+    exit(-1)
+
 class QueueManager(BaseManager):
     pass
 
@@ -70,8 +76,6 @@ queue_in = manager.in_queue()
 queue_out = manager.out_queue()
 
 queue_in.put(ncpus)
-queue_in.put(A)
-queue_in.put(X)
 
 fields = len(A) * len(X[0])
 default_chunk_size = fields // ncpus
@@ -80,11 +84,9 @@ ranges = []
 ptr = 0
 for i in range(ncpus):
     chunk_size = default_chunk_size + 1 if reminder > 0 else default_chunk_size
-    ranges.append([ptr, ptr + chunk_size])
+    queue_in.put((A[ptr:ptr + chunk_size], X))
     ptr += chunk_size
     reminder = reminder - 1
-
-queue_in.put(ranges)
 
 results = []
 for i in range(ncpus):
