@@ -33,11 +33,9 @@ class QueueManager(BaseManager):
     pass
 
 if __name__ == '__main__':
-    start = time.time()
     ip = sys.argv[1] if len(sys.argv) > 1 and  isinstance(sys.argv[1], str) and (sys.argv[1] == 'localhost' or isinstance(ipaddress.ip_address(sys.argv[1]), ipaddress.IPv4Address)) else '127.0.0.1'
     port = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isnumeric() and int(sys.argv[2]) > 0 and int(sys.argv[2]) < 65535 else 8888
   
-
     (queue_in, queue_out) = get_queues(ip, port)
 
     ncpus = queue_in.get()
@@ -51,6 +49,3 @@ if __name__ == '__main__':
 
     for p in procs:
         p.join()
-
-    end = time.time()
-    print(end-start)

@@ -1,5 +1,5 @@
 import ipaddress
-import math, sys, time
+import sys, time
 from multiprocessing.managers import BaseManager
 
 AUTHKEY = b'blah'
@@ -37,7 +37,6 @@ if len(A) < ncpus:
 class QueueManager(BaseManager):
     pass
 
-
 QueueManager.register('in_queue')
 QueueManager.register('out_queue')
 manager = QueueManager(address=(ip, port), authkey=AUTHKEY)
@@ -61,6 +60,11 @@ for i in range(ncpus):
 results = []
 for i in range(ncpus):
     results.append(queue_out.get())
+results = sorted(results)
+
+B = []
+for (_, B_part) in results:
+    B += B_part
 
 print("Wynik:")
-print(sorted(results))
+print(sorted(B))
