@@ -4,37 +4,6 @@ from multiprocessing.managers import BaseManager
 
 AUTHKEY = b'blah'
 
-def validate_server(args):
-    ip = '127.0.0.1'
-    port = 8888
-
-    if len(args) < 3:
-        return ip, port
-
-    if isinstance(args[1], str) and (args[1] == 'localhost' or isinstance(ipaddress.ip_address(args[1]), ipaddress.IPv4Address)):
-        ip = args[1]    
-    if args[2].isnumeric() and int(args[2]) > 0 and int(args[2]) < 65535:
-        port = args[2]
-
-    return ip, int(port)
-
-def validate_args(args):
-    ncpus = 5
-    fnameA = "A.dat"
-    fnameX = "X.dat"
-
-    if len(args) < 6:
-        return ncpus, fnameA, fnameX
-    
-    if args[3].isnumeric() and int(args[3]) > 0:
-        ncpus = args[3]
-    if isinstance(args[4], str):
-        fnameA = args[4]
-    if isinstance(args[5], str):
-        fnameX = args[5]
-    
-    return int(ncpus), fnameA, fnameX
-
 def read(fname):
     f = open(fname, "r")
     nr = int(f.readline())
@@ -52,11 +21,18 @@ def read(fname):
 
     return A
 
-ip, port = validate_server(sys.argv)
-ncpus, fnameA, fnameX = validate_args(sys.argv)
+ip = sys.argv[1] if len(sys.argv) > 1 and  isinstance(sys.argv[1], str) and (sys.argv[1] == 'localhost' or isinstance(ipaddress.ip_address(sys.argv[1]), ipaddress.IPv4Address)) else '127.0.0.1'
+port = int(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2].isnumeric() and int(sys.argv[2]) > 0 and int(sys.argv[2]) < 65535 else 8888
+ncpus = int(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3].isnumeric() and int(sys.argv[3]) > 0 else 5
+fnameA = sys.argv[4] if len(sys.argv) > 4 and isinstance(sys.argv[4], str) else "A.dat"
+fnameX = sys.argv[5] if len(sys.argv) > 5 and isinstance(sys.argv[5], str) else "X.dat"
 
 A = read(fnameA)
 X = read(fnameX)
+
+if len(A) < ncpus:
+    print("Za duzo procesow")
+    exit(-1)
 
 class QueueManager(BaseManager):
     pass
@@ -70,8 +46,6 @@ queue_in = manager.in_queue()
 queue_out = manager.out_queue()
 
 queue_in.put(ncpus)
-queue_in.put(A)
-queue_in.put(X)
 
 fields = len(A) * len(X[0])
 default_chunk_size = fields // ncpus
@@ -80,11 +54,9 @@ ranges = []
 ptr = 0
 for i in range(ncpus):
     chunk_size = default_chunk_size + 1 if reminder > 0 else default_chunk_size
-    ranges.append([ptr, ptr + chunk_size])
+    queue_in.put((A[ptr:ptr + chunk_size], X))
     ptr += chunk_size
     reminder = reminder - 1
-
-queue_in.put(ranges)
 
 results = []
 for i in range(ncpus):
