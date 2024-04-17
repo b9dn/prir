@@ -56,11 +56,6 @@ double integrate (double (*func)(double), double begin, double end, int n) {
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
-    // Get the number of processes
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
-    // Get the rank of the process
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
@@ -85,9 +80,8 @@ int main(int argc, char** argv) {
     double result = integrate(f2, begin, end, n_intervals);
     
     if(world_rank == 0)
-        printf("Result - %d %f\n", world_size, result);
+        printf("Result - %f\n", result);
 
-    // Finalize the MPI environment.
     MPI_Finalize();
 
     return EXIT_SUCCESS;
