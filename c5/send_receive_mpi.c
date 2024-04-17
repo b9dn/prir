@@ -32,9 +32,8 @@ double integrate (double (*func)(double), double begin, double end, int n) {
     double xi_start = begin + step * world_rank * default_parts_per_process;
     if(world_rank < reminder)
         xi_start += world_rank * step;
-    else {
+    else
         xi_start += reminder * step;
-    }
 
     for(int i = 0; i < parts_per_process; i++) {
         double xi = xi_start + i * step;
@@ -46,36 +45,33 @@ double integrate (double (*func)(double), double begin, double end, int n) {
         #endif
     }
     
-    MPI_Send(&local_sum, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
     if(world_rank == 0) {
         total_sum = local_sum;
-        for(int i = 0; i < world_size; i++) {
-            MPI_Recv(&local_sum, 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            total_sum += local_sum;
+        for(int i = 1; i < world_size; i++) {
+            double received_sum;
+            MPI_Recv(&received_sum, 1, MPI_DOUBLE, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            total_sum += received_sum;
         }
     }
-
-    if(world_rank == 0) {
-        return total_sum;
+    else {
+        MPI_Send(&local_sum, 1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
     }
+
+    if(world_rank == 0)
+        return total_sum;
+
     return 0.0;
 }
 
 int main(int argc, char** argv) {
     MPI_Init(&argc, &argv);
 
-    // Get the number of processes
-    int world_size;
-    MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
-    // Get the rank of the process
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
     if(argc != 4) {
-        if(world_rank == 0) {
+        if(world_rank == 0)
             printf("Bad argument number\n");
-        }
         MPI_Finalize();
         return EXIT_FAILURE;
     }
@@ -84,14 +80,19 @@ int main(int argc, char** argv) {
     double end = atof(argv[2]);
     double n_intervals = atoi(argv[3]);
 
-    double result = integrate(f2, begin, end, n_intervals);
-    
-    if(world_rank == 0) {
-        printf("Result - %d %f\n", world_size, result);
+    if(n_intervals <= 0 || begin >= end) {
+        if(world_rank == 0)
+            printf("Incorrect arguments\n");
+        MPI_Finalize();
+        return EXIT_FAILURE;
     }
 
-    // Finalize the MPI environment.
+    double result = integrate(f2, begin, end, n_intervals);
+    
+    if(world_rank == 0)
+        printf("Result - %f\n", result);
+
     MPI_Finalize();
 
-    return 0;
+    return EXIT_SUCCESS;
 }
