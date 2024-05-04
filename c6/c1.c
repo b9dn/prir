@@ -24,8 +24,7 @@ int main(int argc, char** argv) {
 
     srand(world_rank + time(NULL));
     int rand_liczba = rand();
-    int liczba = rand_liczba == 0 ? 1 : rand_liczba % 29 + 1;
-    /* int liczba = world_rank * 4 + 4; */
+    int liczba = world_rank * 4 + 4;
     printf("Process %d, Liczba %d\n", world_rank, liczba);
 
     int received;

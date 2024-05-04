@@ -37,7 +37,7 @@ int main(int argc, char *argv[])  {
     MPI_Cart_create(MPI_COMM_WORLD, 1, dims, periods, reorder, &cartcomm);
     MPI_Comm_rank(cartcomm, &rank);
     MPI_Cart_coords(cartcomm, rank, 1, coords);
-    MPI_Cart_shift(cartcomm, 1, 1, &nbrs[LEFT], &nbrs[RIGHT]);
+    MPI_Cart_shift(cartcomm, 0, 1, &nbrs[LEFT], &nbrs[RIGHT]);
 
     int outbuf[SEND_ARR_SIZE] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     int inbuf[SEND_ARR_SIZE] = {0};
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])  {
     
     int total_sum_last = 0;
     for(int i = 0; i < SEND_ARR_SIZE; i++) {
-        MPI_Recv(&inbuf[i], 1, MPI_INT, source, tag, MPI_COMM_WORLD, NULL);
+        MPI_Recv(&inbuf[i], 1, MPI_INT, source, tag, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         
         if(rank != 0)
             do_sth_with_input(inbuf, outbuf, i, 1);

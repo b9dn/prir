@@ -21,7 +21,7 @@ int main(int argc, char *argv[])  {
         MPI_Cart_create(MPI_COMM_WORLD, 1, dims, periods, reorder, &cartcomm);
         MPI_Comm_rank(cartcomm, &rank);
         MPI_Cart_coords(cartcomm, rank, 1, coords);
-        MPI_Cart_shift(cartcomm, 1, 1, &nbrs[LEFT], &nbrs[RIGHT]);
+        MPI_Cart_shift(cartcomm, 0, 1, &nbrs[LEFT], &nbrs[RIGHT]);
 
         printf("rank = %d coords = %d  neighbors(l,r) = %d %d\n",
                 rank, coords[0], nbrs[LEFT], nbrs[RIGHT]);
