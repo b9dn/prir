@@ -31,7 +31,7 @@ int main(int argc, char *argv[])  {
     if(numtasks != SIZE) {
         printf("Must specify %d processors. Terminating.\n", SIZE);
         MPI_Finalize();
-        return -1;
+        return 0;
     }
 
     MPI_Cart_create(MPI_COMM_WORLD, 1, dims, periods, reorder, &cartcomm);
@@ -66,3 +66,4 @@ int main(int argc, char *argv[])  {
 
     MPI_Finalize();
 }
+

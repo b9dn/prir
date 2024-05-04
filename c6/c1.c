@@ -22,8 +22,9 @@ int main(int argc, char** argv) {
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
-    srand(world_rank + time(NULL));
-    int rand_liczba = rand();
+    /* srand(world_rank + time(NULL)); */
+    /* int rand_liczba = rand(); */
+    /* int liczba = rand_liczba == 0 ? 1 : rand_liczba % 20 + 1; */
     int liczba = world_rank * 4 + 4;
     printf("Process %d, Liczba %d\n", world_rank, liczba);
 
@@ -57,3 +58,4 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
